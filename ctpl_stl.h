@@ -105,7 +105,7 @@ namespace ctpl {
                 else {  // the number of threads is decreased
                     for (int i = oldNThreads - 1; i >= nThreads; --i) {
                         *this->flags[i] = true;  // this thread will finish
-                        this->threads[i]->detach();
+                        this->threads[i]->detach();  // 将线程对象（std::thread）与它所管理的底层操作系统线程解除 “关联关系”。
                     }
                     {
                         // stop the detached threads that were waiting
@@ -133,7 +133,8 @@ namespace ctpl {
             std::function<void(int)> f;
             if (_f)
                 f = *_f;
-            return f;
+            return f; // 返回任务拷贝
+            // 此时 func 会析构，自动调用 delete _f 释放原任务指针的内存 —— 既返回了可用的任务，又保证了内存不泄漏。
         }
 
         // wait for all computing threads to finish and stop all threads
@@ -141,9 +142,11 @@ namespace ctpl {
         // if isWait == true, all the functions in the queue are run, otherwise the queue is cleared without running the functions
         void stop(bool isWait = false) {
             if (!isWait) {
+                // 防止重复调用强制停止
                 if (this->isStop)
                     return;
                 this->isStop = true;
+                // 给所有线程设置“停止标志”，命令它们立即退出
                 for (int i = 0, n = this->size(); i < n; ++i) {
                     *this->flags[i] = true;  // command the threads to stop
                 }
